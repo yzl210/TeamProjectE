@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "cn.leomc.teamprojecte.mixin",
+  "refmap": "teamprojecte.refmap.json",
+  "mixins": [
+    "KnowledgeEventsProviderMixin",
+    "TransmutationOfflineMixin"
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
