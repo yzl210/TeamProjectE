@@ -20,7 +20,7 @@ group = 'cn.leomc'
 version = '1.0'
 
 java {
-    archivesBaseName = 'teamprojecte'
+    archivesBaseName = "teamprojecte-${mc_version}"
     toolchain.languageVersion = JavaLanguageVersion.of(17)
 }
 
@@ -38,7 +38,7 @@ minecraft {
     //
     // Use non-default mappings at your own risk. They may not always work.
     // Simply re-run your setup task after changing the mappings to update your workspace.
-    mappings channel: 'parchment', version: '2022.09.04-1.18.2'
+    mappings channel: 'parchment', version: '2022.11.27-1.19.2'
 
     // accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
 
@@ -147,10 +147,10 @@ dependencies {
     // Specify the version of Minecraft to use. If this is any group other than 'net.minecraft' it is assumed
     // that the dep is a ForgeGradle 'patcher' dependency, and its patches will be applied.
     // The userdev artifact is a special name and will get all sorts of transformations applied to it.
-    minecraft 'net.minecraftforge:forge:1.18.2-40.1.80'
+    minecraft "net.minecraftforge:forge:${mc_version}-${forge_version}"
 
-    implementation fg.deobf('curse.maven:projecte-226410:3722831')
-    runtimeOnly fg.deobf('curse.maven:projecte-579177:4013540')
+    implementation fg.deobf('curse.maven:projecte-226410:3955047')
+    runtimeOnly fg.deobf('curse.maven:projectex-579177:4099773')
 
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }

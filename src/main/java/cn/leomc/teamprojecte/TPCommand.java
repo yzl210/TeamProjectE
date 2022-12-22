@@ -9,7 +9,6 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.ChatFormatting;
-import net.minecraft.Util;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -76,17 +75,17 @@ public class TPCommand {
         UUID newOwnerUUID = TeamProjectE.getPlayerUUID(newOwner);
 
         if(!team.getAll().contains(newOwnerUUID)){
-            context.getSource().sendFailure(new TranslatableComponent("commands.teamprojecte.transfer_ownership.not_in_team"));
+            context.getSource().sendFailure(Component.translatable("commands.teamprojecte.transfer_ownership.not_in_team"));
             return 0;
         }
         if(team.getOwner().equals(newOwnerUUID)){
-            context.getSource().sendFailure(new TranslatableComponent("commands.teamprojecte.transfer_ownership.already_owner"));
+            context.getSource().sendFailure(Component.translatable("commands.teamprojecte.transfer_ownership.already_owner"));
             return 0;
         }
 
         team.transferOwner(newOwnerUUID);
-        newOwner.sendMessage(new TranslatableComponent("commands.teamprojecte.transfer_ownership.new_owner").withStyle(ChatFormatting.GREEN), ChatType.SYSTEM, Util.NIL_UUID);
-        context.getSource().sendSuccess(new TranslatableComponent("commands.teamprojecte.transfer_ownership.success", newOwner.getName()), true);
+        newOwner.sendSystemMessage(Component.translatable("commands.teamprojecte.transfer_ownership.new_owner").withStyle(ChatFormatting.GREEN));
+        context.getSource().sendSuccess(Component.translatable("commands.teamprojecte.transfer_ownership.success", newOwner.getName()), true);
 
         return Command.SINGLE_SUCCESS;
     }
@@ -103,13 +102,13 @@ public class TPCommand {
         kick.forEach(p -> {
             team.removeMember(TeamProjectE.getPlayerUUID(p));
             TeamProjectE.sync(p);
-            p.sendMessage(new TranslatableComponent("commands.teamprojecte.kicked").withStyle(ChatFormatting.RED), ChatType.SYSTEM, Util.NIL_UUID);
+            p.sendSystemMessage(Component.translatable("commands.teamprojecte.kicked").withStyle(ChatFormatting.RED));
         });
         
         if(kick.size() > 0)
-            context.getSource().sendSuccess(new TranslatableComponent("commands.teamprojecte.kick.success", kick.size()), true);
+            context.getSource().sendSuccess(Component.translatable("commands.teamprojecte.kick.success", kick.size()), true);
         else
-            context.getSource().sendFailure(new TranslatableComponent("commands.teamprojecte.players_not_found"));
+            context.getSource().sendFailure(Component.translatable("commands.teamprojecte.players_not_found"));
         
         return kick.size();
     }
@@ -120,7 +119,7 @@ public class TPCommand {
         if(team == null)
             return 0;
 
-        player.sendMessage(new TranslatableComponent("commands.teamprojecte.members", getNames(team.getOwner(), team.getAll())), ChatType.SYSTEM, Util.NIL_UUID);
+        player.sendSystemMessage(Component.translatable("commands.teamprojecte.members", getNames(team.getOwner(), team.getAll())));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -134,15 +133,15 @@ public class TPCommand {
             if(player != null)
                 component = player.getName().copy()
                         .withStyle(ChatFormatting.GREEN)
-                        .withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new TranslatableComponent("commands.teamprojecte.members.member_online"))));
+                        .withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("commands.teamprojecte.members.member_online"))));
             else if(UsernameCache.containsUUID(uuid))
-                component = new TextComponent(UsernameCache.getLastKnownUsername(uuid))
+                component = Component.literal(UsernameCache.getLastKnownUsername(uuid))
                         .withStyle(ChatFormatting.RED)
-                        .withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new TranslatableComponent("commands.teamprojecte.members.member_offline"))));
+                        .withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("commands.teamprojecte.members.member_offline"))));
             else
-                component = new TextComponent(uuid.toString())
+                component = Component.literal(uuid.toString())
                         .withStyle(ChatFormatting.GRAY)
-                        .withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new TranslatableComponent("commands.teamprojecte.members.member_unknown"))));
+                        .withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("commands.teamprojecte.members.member_unknown"))));
             if(uuid.equals(owner))
                 component.withStyle(ChatFormatting.BOLD);
             components.add(component);
@@ -164,7 +163,7 @@ public class TPCommand {
         ServerPlayer player = checkPlayer(context);
         UUID uuid = UuidArgument.getUuid(context, "team");
         if(!INVITATIONS.get(TeamProjectE.getPlayerUUID(player)).contains(uuid)){
-            context.getSource().sendFailure(new TranslatableComponent("commands.teamprojecte.invitation.not_found"));
+            context.getSource().sendFailure(Component.translatable("commands.teamprojecte.invitation.not_found"));
             return -1;
         }
 
@@ -172,7 +171,7 @@ public class TPCommand {
 
         TPTeam team = TPTeam.getTeam(uuid);
         if(team == null){
-            context.getSource().sendFailure(new TranslatableComponent("commands.teamprojecte.team_not_found"));
+            context.getSource().sendFailure(Component.translatable("commands.teamprojecte.team_not_found"));
             return -1;
         }
         TPTeam originalTeam = TPTeam.getTeamByMember(TeamProjectE.getPlayerUUID(player));
@@ -184,9 +183,9 @@ public class TPCommand {
 
         TeamProjectE.sync(player);
 
-        context.getSource().sendSuccess(new TranslatableComponent("commands.teamprojecte.invite.accepted").withStyle(ChatFormatting.GREEN), false);
-        Component component = new TranslatableComponent("commands.teamprojecte.joined_team", player.getDisplayName()).withStyle(ChatFormatting.GREEN);
-        TeamProjectE.getAllOnline(team.getAll()).forEach(p -> p.sendMessage(component, Util.NIL_UUID));
+        context.getSource().sendSuccess(Component.translatable("commands.teamprojecte.invite.accepted").withStyle(ChatFormatting.GREEN), false);
+        Component component = Component.translatable("commands.teamprojecte.joined_team", player.getDisplayName()).withStyle(ChatFormatting.GREEN);
+        TeamProjectE.getAllOnline(team.getAll()).forEach(p -> p.sendSystemMessage(component));
 
         return Command.SINGLE_SUCCESS;
     }
@@ -196,7 +195,7 @@ public class TPCommand {
         ServerPlayer player = checkPlayer(context);
         UUID uuid = UuidArgument.getUuid(context, "team");
         if(!INVITATIONS.get(TeamProjectE.getPlayerUUID(player)).contains(uuid)){
-            context.getSource().sendFailure(new TranslatableComponent("commands.teamprojecte.invitation.not_found"));
+            context.getSource().sendFailure(Component.translatable("commands.teamprojecte.invitation.not_found"));
             return -1;
         }
 
@@ -204,13 +203,13 @@ public class TPCommand {
 
         TPTeam team = TPTeam.getTeam(uuid);
         if(team == null){
-            context.getSource().sendFailure(new TranslatableComponent("commands.teamprojecte.team_not_found"));
+            context.getSource().sendFailure(Component.translatable("commands.teamprojecte.team_not_found"));
             return -1;
         }
 
-        player.sendMessage(new TranslatableComponent("commands.teamprojecte.invite.declined").withStyle(ChatFormatting.RED), ChatType.SYSTEM, Util.NIL_UUID);
+        player.sendSystemMessage(Component.translatable("commands.teamprojecte.invite.declined").withStyle(ChatFormatting.RED));
         TeamProjectE.getAllOnline(Collections.singletonList(team.getOwner())).forEach(p ->
-                p.sendMessage(new TranslatableComponent("commands.teamprojecte.invitation.declined", player.getDisplayName()), Util.NIL_UUID));
+                p.sendSystemMessage(Component.translatable("commands.teamprojecte.invitation.declined", player.getDisplayName())));
 
         return Command.SINGLE_SUCCESS;
     }
@@ -230,24 +229,24 @@ public class TPCommand {
                         .filter(p -> !team.getAll().contains(TeamProjectE.getPlayerUUID(p)))
                         .toList();
 
-        Component component = new TranslatableComponent("commands.teamprojecte.invitation",
+        Component component = Component.translatable("commands.teamprojecte.invitation",
                 player.getDisplayName(),
-                new TranslatableComponent("commands.teamprojecte.invite.option.accept")
+                Component.translatable("commands.teamprojecte.invite.option.accept")
                         .withStyle(style -> style.applyFormat(ChatFormatting.GREEN)
                         .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/team_projecte accept " + team.getUUID()))),
-                new TranslatableComponent("commands.teamprojecte.invite.option.decline")
+                Component.translatable("commands.teamprojecte.invite.option.decline")
                         .withStyle(style -> style.applyFormat(ChatFormatting.RED)
                                 .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/team_projecte decline " + team.getUUID())))
                 );
 
         for (ServerPlayer p : players) {
             INVITATIONS.put(TeamProjectE.getPlayerUUID(p), team.getUUID());
-            p.sendMessage(component, ChatType.SYSTEM, Util.NIL_UUID);
+            p.sendSystemMessage(component);
         }
         if(players.size() > 0)
-            context.getSource().sendSuccess(new TranslatableComponent("commands.teamprojecte.invite.success", players.size()), true);
+            context.getSource().sendSuccess(Component.translatable("commands.teamprojecte.invite.success", players.size()), true);
         else
-            context.getSource().sendFailure(new TranslatableComponent("commands.teamprojecte.players_not_found"));
+            context.getSource().sendFailure(Component.translatable("commands.teamprojecte.players_not_found"));
         return players.size();
     }
 
@@ -260,7 +259,7 @@ public class TPCommand {
     private static TPTeam checkInTeam(Player player){
         TPTeam team = TPTeam.getTeamByMember(TeamProjectE.getPlayerUUID(player));
         if (team == null || (team.getOwner().equals(TeamProjectE.getPlayerUUID(player)) && team.getMembers().isEmpty())) {
-            player.sendMessage(new TranslatableComponent("commands.teamprojecte.leave.not_in_team").withStyle(ChatFormatting.RED), Util.NIL_UUID);
+            player.sendSystemMessage(Component.translatable("commands.teamprojecte.leave.not_in_team").withStyle(ChatFormatting.RED));
             return null;
         }
         return team;
@@ -268,7 +267,7 @@ public class TPCommand {
 
     private static boolean checkOwner(TPTeam team, ServerPlayer player){
         if(!TeamProjectE.getPlayerUUID(player).equals(team.getOwner())) {
-            player.sendMessage(new TranslatableComponent("commands.teamprojecte.not_owner").withStyle(ChatFormatting.RED), ChatType.SYSTEM, Util.NIL_UUID);
+            player.sendSystemMessage(Component.translatable("commands.teamprojecte.not_owner").withStyle(ChatFormatting.RED));
             return false;
         }
         return true;

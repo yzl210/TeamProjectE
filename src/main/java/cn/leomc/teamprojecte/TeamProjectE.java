@@ -7,7 +7,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
-import net.minecraftforge.event.entity.EntityJoinWorldEvent;
+import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -39,8 +39,8 @@ public class TeamProjectE {
     }
 
     @SubscribeEvent
-    public void onPlayerJoin(EntityJoinWorldEvent event){
-        if(event.getWorld().dimension() == Level.OVERWORLD && event.getEntity() instanceof ServerPlayer player)
+    public void onPlayerJoin(EntityJoinLevelEvent event){
+        if(event.getLevel().dimension() == Level.OVERWORLD && event.getEntity() instanceof ServerPlayer player)
             sync(player);
     }
 
