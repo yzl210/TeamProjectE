@@ -17,7 +17,7 @@ plugins {
 apply plugin: 'org.spongepowered.mixin'
 
 group = 'cn.leomc'
-version = '1.0'
+version = '1.1'
 
 java {
     archivesBaseName = 'teamprojecte'
@@ -150,7 +150,8 @@ dependencies {
     minecraft 'net.minecraftforge:forge:1.18.2-40.1.80'
 
     implementation fg.deobf('curse.maven:projecte-226410:3722831')
-    runtimeOnly fg.deobf('curse.maven:projecte-579177:4013540')
+    runtimeOnly fg.deobf('curse.maven:projectex-579177:4380542')
+    //runtimeOnly fg.deobf("curse.maven:exex-681874")
 
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }

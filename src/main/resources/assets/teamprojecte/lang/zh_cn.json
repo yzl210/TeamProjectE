@@ -21,5 +21,13 @@
   "commands.teamprojecte.transfer_ownership.not_in_team": "该玩家不在你的队伍!",
   "commands.teamprojecte.transfer_ownership.already_owner": "无法转移给你自己!",
   "commands.teamprojecte.transfer_ownership.new_owner": "你现在是当前等价交换队伍的所有者了!",
-  "commands.teamprojecte.transfer_ownership.success": "成功将所有权转移给%s"
+  "commands.teamprojecte.transfer_ownership.success": "成功将所有权转移给%s",
+  "commands.teamprojecte.settings.query.sharing_emc.false": "该队伍当前已禁用EMC共享",
+  "commands.teamprojecte.settings.query.sharing_emc.true": "该队伍当前已启用EMC共享",
+  "commands.teamprojecte.settings.query.sharing_knowledge.false": "该队伍当前已禁用知识共享",
+  "commands.teamprojecte.settings.query.sharing_knowledge.true": "该队伍当前已启用知识共享",
+  "commands.teamprojecte.settings.set.sharing_emc.false": "已将EMC共享设为否",
+  "commands.teamprojecte.settings.set.sharing_emc.true": "已将EMC共享设为是",
+  "commands.teamprojecte.settings.set.sharing_knowledge.false": "已将知识共享设为否",
+  "commands.teamprojecte.settings.set.sharing_knowledge.true": "已将知识共享设为是"
 }

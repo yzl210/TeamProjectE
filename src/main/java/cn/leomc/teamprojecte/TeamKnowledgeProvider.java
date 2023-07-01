@@ -3,6 +3,7 @@ package cn.leomc.teamprojecte;
 import com.google.common.base.Suppliers;
 import moze_intel.projecte.api.ItemInfo;
 import moze_intel.projecte.api.capabilities.IKnowledgeProvider;
+import moze_intel.projecte.api.capabilities.PECapabilities;
 import moze_intel.projecte.api.event.PlayerKnowledgeChangeEvent;
 import moze_intel.projecte.emc.EMCMappingHandler;
 import moze_intel.projecte.emc.nbt.NBTManager;
@@ -42,23 +43,23 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
     }
 
     private void fireChangedEvent() {
-            getTeam().getAll()
-                    .forEach(uuid -> MinecraftForge.EVENT_BUS.post(new PlayerKnowledgeChangeEvent(uuid)));
+        getTeam().getAll()
+                .forEach(uuid -> MinecraftForge.EVENT_BUS.post(new PlayerKnowledgeChangeEvent(uuid)));
     }
 
-    private TPTeam getTeam(){
+    private TPTeam getTeam() {
         return TPTeam.getOrCreateTeam(playerUUID.get());
     }
 
     @Override
     public boolean hasFullKnowledge() {
-        return getTeam().hasFullKnowledge();
+        return getTeam().hasFullKnowledge(playerUUID.get());
     }
 
     @Override
     public void setFullKnowledge(boolean fullKnowledge) {
         boolean changed = hasFullKnowledge() != fullKnowledge;
-        getTeam().setFullKnowledge(fullKnowledge);
+        getTeam().setFullKnowledge(fullKnowledge, playerUUID.get());
         if (changed) {
             fireChangedEvent();
             //sync(playerUUID);
@@ -67,9 +68,9 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
 
     @Override
     public void clearKnowledge() {
-        boolean hasKnowledge = hasFullKnowledge() || !getTeam().getKnowledge().isEmpty();
-        getTeam().clearKnowledge();
-        getTeam().setFullKnowledge(false);
+        boolean hasKnowledge = hasFullKnowledge() || !getTeam().getKnowledge(playerUUID.get()).isEmpty();
+        getTeam().clearKnowledge(playerUUID.get());
+        getTeam().setFullKnowledge(false, playerUUID.get());
         if (hasKnowledge) {
             //If we previously had any knowledge fire the fact that our knowledge changed
             fireChangedEvent();
@@ -95,18 +96,18 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
 
     @Override
     public boolean hasKnowledge(@NotNull ItemInfo info) {
-        if (getTeam().hasFullKnowledge()) {
+        if (getTeam().hasFullKnowledge(playerUUID.get())) {
             //If we have all knowledge, check if the item has extra data and
             // may not actually be in our knowledge set but can be added to it
             ItemInfo persistentInfo = getIfPersistent(info);
-            return persistentInfo == null || getTeam().getKnowledge().contains(persistentInfo);
+            return persistentInfo == null || getTeam().getKnowledge(playerUUID.get()).contains(persistentInfo);
         }
-        return getTeam().getKnowledge().contains(NBTManager.getPersistentInfo(info));
+        return getTeam().getKnowledge(playerUUID.get()).contains(NBTManager.getPersistentInfo(info));
     }
 
     @Override
     public boolean addKnowledge(@NotNull ItemInfo info) {
-        if (getTeam().hasFullKnowledge()) {
+        if (getTeam().hasFullKnowledge(playerUUID.get())) {
             ItemInfo persistentInfo = getIfPersistent(info);
             if (persistentInfo == null) {
                 //If the item doesn't have extra data, and we have all knowledge, don't actually add any
@@ -124,8 +125,8 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
             //Note: We don't bother checking if we already somehow know the tome without having full knowledge
             // as we are learning it without any NBT which means that it doesn't have any extra persistent info
             // so can just check if it is already in it by nature of it being a set
-            getTeam().addKnowledge(info);
-            getTeam().setFullKnowledge(true);
+            getTeam().addKnowledge(info, playerUUID.get());
+            getTeam().setFullKnowledge(true, playerUUID.get());
             fireChangedEvent();
             sync(playerUUID.get());
             return true;
@@ -134,7 +135,7 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
     }
 
     private boolean tryAdd(@NotNull ItemInfo cleanedInfo) {
-        if (getTeam().addKnowledge(cleanedInfo)) {
+        if (getTeam().addKnowledge(cleanedInfo, playerUUID.get())) {
             fireChangedEvent();
             //syncKnowledgeChange(playerUUID, cleanedInfo, true);
             return true;
@@ -144,15 +145,15 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
 
     @Override
     public boolean removeKnowledge(@NotNull ItemInfo info) {
-        if (getTeam().hasFullKnowledge()) {
+        if (getTeam().hasFullKnowledge(playerUUID.get())) {
             if (info.getItem() instanceof Tome) {
                 //If we have full knowledge and are trying to remove the tome allow it
                 if (info.hasNBT()) {
                     //Make sure we don't have any NBT as it doesn't have any effect for the tome
                     info = ItemInfo.fromItem(info.getItem());
                 }
-                getTeam().removeKnowledge(info);
-                getTeam().setFullKnowledge(false);
+                getTeam().removeKnowledge(info, playerUUID.get());
+                getTeam().setFullKnowledge(false, playerUUID.get());
                 fireChangedEvent();
                 //sync(playerUUID);
                 return true;
@@ -166,7 +167,7 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
     }
 
     private boolean tryRemove(@NotNull ItemInfo cleanedInfo) {
-        if (getTeam().getKnowledge().remove(cleanedInfo)) {
+        if (getTeam().getKnowledge(playerUUID.get()).remove(cleanedInfo)) {
             fireChangedEvent();
             //syncKnowledgeChange(playerUUID, cleanedInfo, false);
             return true;
@@ -177,13 +178,13 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
     @NotNull
     @Override
     public Set<ItemInfo> getKnowledge() {
-        if (getTeam().hasFullKnowledge()) {
+        if (getTeam().hasFullKnowledge(playerUUID.get())) {
             Set<ItemInfo> allKnowledge = EMCMappingHandler.getMappedItems();
             //Make sure we include any extra items they have learned such as various enchanted items.
-            allKnowledge.addAll(getTeam().getKnowledge());
+            allKnowledge.addAll(getTeam().getKnowledge(playerUUID.get()));
             return Collections.unmodifiableSet(allKnowledge);
         }
-        return Collections.unmodifiableSet(getTeam().getKnowledge());
+        return Collections.unmodifiableSet(getTeam().getKnowledge(playerUUID.get()));
     }
 
     @NotNull
@@ -194,12 +195,12 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
 
     @Override
     public BigInteger getEmc() {
-        return getTeam().getEmc();
+        return getTeam().getEmc(playerUUID.get());
     }
 
     @Override
     public void setEmc(BigInteger emc) {
-        getTeam().setEmc(emc);
+        getTeam().setEmc(emc, playerUUID.get());
         syncEmc(playerUUID.get());
     }
 
@@ -209,19 +210,25 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
     }
 
     public void sync(UUID uuid) {
-        TeamProjectE.getOnlineTeamMembers(uuid).forEach(p -> PacketHandler.sendTo(new KnowledgeSyncPKT(serializeForClient()), p));
+        if (!getTeam().isSharingEMC() && !getTeam().isSharingKnowledge())
+            Optional.ofNullable(ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayer(uuid))
+                    .ifPresent(p -> PacketHandler.sendTo(new KnowledgeSyncPKT(serializeForClient()), p));
+        else
+            TeamProjectE.getOnlineTeamMembers(uuid)
+                    .forEach(p -> p.getCapability(PECapabilities.KNOWLEDGE_CAPABILITY)
+                            .ifPresent(cap -> PacketHandler.sendTo(new KnowledgeSyncPKT(((TeamKnowledgeProvider) cap).serializeForClient()), p)));
     }
 
-    private CompoundTag serializeForClient(){
+    private CompoundTag serializeForClient() {
         CompoundTag properties = new CompoundTag();
-        properties.putString("transmutationEmc", getTeam().getEmc().toString());
+        properties.putString("transmutationEmc", getTeam().getEmc(playerUUID.get()).toString());
         ListTag knowledgeWrite = new ListTag();
-        for (ItemInfo i : getTeam().getKnowledge())
+        for (ItemInfo i : getTeam().getKnowledge(playerUUID.get()))
             knowledgeWrite.add(i.write(new CompoundTag()));
 
         properties.put("knowledge", knowledgeWrite);
         properties.put("inputlock", this.inputLocks.serializeNBT());
-        properties.putBoolean("fullknowledge", getTeam().hasFullKnowledge());
+        properties.putBoolean("fullknowledge", getTeam().hasFullKnowledge(playerUUID.get()));
         return properties;
     }
 
@@ -231,8 +238,12 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
         syncEmc(TeamProjectE.getPlayerUUID(player));
     }
 
-    public void syncEmc(UUID uuid){
-        TeamProjectE.getOnlineTeamMembers(uuid).forEach(p -> PacketHandler.sendTo(new KnowledgeSyncEmcPKT(getEmc()), p));
+    public void syncEmc(UUID uuid) {
+        if (getTeam().isSharingEMC())
+            TeamProjectE.getOnlineTeamMembers(uuid).forEach(p -> PacketHandler.sendTo(new KnowledgeSyncEmcPKT(getEmc()), p));
+        else
+            Optional.ofNullable(ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayer(uuid))
+                    .ifPresent(p -> PacketHandler.sendTo(new KnowledgeSyncEmcPKT(getEmc()), p));
     }
 
     @Override
@@ -240,8 +251,12 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
         syncKnowledgeChange(TeamProjectE.getPlayerUUID(player), change, learned);
     }
 
-    public void syncKnowledgeChange(UUID uuid, ItemInfo change, boolean learned){
-        TeamProjectE.getOnlineTeamMembers(uuid).forEach(p -> PacketHandler.sendTo(new KnowledgeSyncChangePKT(change, learned), p));
+    public void syncKnowledgeChange(UUID uuid, ItemInfo change, boolean learned) {
+        if (getTeam().isSharingKnowledge())
+            TeamProjectE.getOnlineTeamMembers(uuid).forEach(p -> PacketHandler.sendTo(new KnowledgeSyncChangePKT(change, learned), p));
+        else
+            Optional.ofNullable(ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayer(uuid))
+                    .ifPresent(p -> PacketHandler.sendTo(new KnowledgeSyncChangePKT(change, learned), p));
     }
 
     @Override
@@ -288,6 +303,4 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
         }
         inputLocks.deserializeNBT(properties.getCompound("inputlock"));
     }
-
-
 }

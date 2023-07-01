@@ -18,7 +18,9 @@ import java.util.UUID;
 @Mixin(TransmutationOffline.class)
 public class TransmutationOfflineMixin {
 
-    @Shadow(remap = false) @Final private static Map<UUID, IKnowledgeProvider> cachedKnowledgeProviders;
+    @Shadow(remap = false)
+    @Final
+    private static Map<UUID, IKnowledgeProvider> cachedKnowledgeProviders;
 
     @Inject(
             method = "cacheOfflineData",
@@ -26,7 +28,7 @@ public class TransmutationOfflineMixin {
             cancellable = true,
             remap = false
     )
-    private static void onCacheOfflinePlayerData(UUID playerUUID, CallbackInfoReturnable<Boolean> cir){
+    private static void onCacheOfflinePlayerData(UUID playerUUID, CallbackInfoReturnable<Boolean> cir) {
         cir.cancel();
         Preconditions.checkState(Thread.currentThread().getThreadGroup() == SidedThreadGroups.SERVER);
         cachedKnowledgeProviders.put(playerUUID, new TeamKnowledgeProvider(playerUUID));
