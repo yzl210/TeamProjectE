@@ -39,8 +39,8 @@ public class TeamProjectE {
     }
 
     @SubscribeEvent
-    public void onPlayerJoin(EntityJoinLevelEvent event){
-        if(event.getLevel().dimension() == Level.OVERWORLD && event.getEntity() instanceof ServerPlayer player)
+    public void onPlayerJoin(EntityJoinLevelEvent event) {
+        if (event.getLevel().dimension() == Level.OVERWORLD && event.getEntity() instanceof ServerPlayer player)
             sync(player);
     }
 
