@@ -4,6 +4,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
@@ -28,7 +29,7 @@ public class TPCommand {
 
     public static final Multimap<UUID, UUID> INVITATIONS = HashMultimap.create();
 
-    public static void register(CommandDispatcher<CommandSourceStack> dispatcher){
+    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("team_projecte")
                 .then(Commands.literal("invite")
                         .requires(TPCommand::requiresPlayer)
@@ -38,14 +39,14 @@ public class TPCommand {
                         .requires(TPCommand::requiresPlayer)
                         .executes(TPCommand::leave))
                 .then(Commands.literal("transfer_ownership")
-                        .requires(TPCommand::requiresPlayer)
+                        .requires(TPCommand::requiresOwner)
                         .then(Commands.argument("member", EntityArgument.player())
                                 .executes(TPCommand::transferOwnership)))
                 .then(Commands.literal("members")
                         .requires(TPCommand::requiresPlayer)
                         .executes(TPCommand::members))
                 .then(Commands.literal("kick")
-                        .requires(TPCommand::requiresPlayer)
+                        .requires(TPCommand::requiresOwner)
                         .then(Commands.argument("members", EntityArgument.players())
                                 .executes(TPCommand::kick)))
                 .then(Commands.literal("accept")
@@ -58,17 +59,37 @@ public class TPCommand {
                         .then(Commands.argument("team", UuidArgument.uuid())
                                 .suggests(TPCommand::createSuggestionsForInvitation)
                                 .executes(TPCommand::decline)))
+                .then(Commands.literal("settings")
+                        .then(Commands.literal("share_emc")
+                                .executes(TPCommand::queryShareEMC)
+                                .then(Commands.argument("value", BoolArgumentType.bool())
+                                        .requires(TPCommand::requiresOwner)
+                                        .executes(TPCommand::setShareEMC)))
+                        .then(Commands.literal("share_knowledge")
+                                .executes(TPCommand::queryShareKnowledge)
+                                .then(Commands.argument("value", BoolArgumentType.bool())
+                                        .requires(TPCommand::requiresOwner)
+                                        .executes(TPCommand::setShareKnowledge))))
         );
     }
+
 
     private static boolean requiresPlayer(CommandSourceStack stack) {
         return stack.getEntity() instanceof ServerPlayer;
     }
 
+    private static boolean requiresOwner(CommandSourceStack stack) {
+        if (stack.getEntity() instanceof ServerPlayer player) {
+            TPTeam team = TPTeam.getTeamByMember(TeamProjectE.getPlayerUUID(player));
+            return team == null || TeamProjectE.getPlayerUUID(player).equals(team.getOwner());
+        }
+        return false;
+    }
+
     private static int transferOwnership(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = checkPlayer(context);
         TPTeam team = checkInTeam(player);
-        if(team == null || !checkOwner(team, player))
+        if (team == null || !checkOwner(team, player))
             return 0;
 
         ServerPlayer newOwner = EntityArgument.getPlayer(context, "member");
@@ -93,7 +114,7 @@ public class TPCommand {
     private static int kick(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = checkPlayer(context);
         TPTeam team = checkInTeam(player);
-        if(team == null || !checkOwner(team, player))
+        if (team == null || !checkOwner(team, player))
             return 0;
 
         List<ServerPlayer> kick = EntityArgument.getPlayers(context, "members").stream()
@@ -101,11 +122,10 @@ public class TPCommand {
                 .toList();
         kick.forEach(p -> {
             team.removeMember(TeamProjectE.getPlayerUUID(p));
-            TeamProjectE.sync(p);
             p.sendSystemMessage(Component.translatable("commands.teamprojecte.kicked").withStyle(ChatFormatting.RED));
         });
-        
-        if(kick.size() > 0)
+
+        if (!kick.isEmpty())
             context.getSource().sendSuccess(Component.translatable("commands.teamprojecte.kick.success", kick.size()), true);
         else
             context.getSource().sendFailure(Component.translatable("commands.teamprojecte.players_not_found"));
@@ -116,21 +136,21 @@ public class TPCommand {
     private static int members(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = checkPlayer(context);
         TPTeam team = checkInTeam(player);
-        if(team == null)
+        if (team == null)
             return 0;
 
         player.sendSystemMessage(Component.translatable("commands.teamprojecte.members", getNames(team.getOwner(), team.getAll())));
         return Command.SINGLE_SUCCESS;
     }
 
-    private static Component getNames(UUID owner, List<UUID> uuids){
+    private static Component getNames(UUID owner, List<UUID> uuids) {
         List<Component> components = new ArrayList<>();
         PlayerList playerList = ServerLifecycleHooks.getCurrentServer().getPlayerList();
 
         for (UUID uuid : uuids) {
             MutableComponent component;
             ServerPlayer player = playerList.getPlayer(uuid);
-            if(player != null)
+            if (player != null)
                 component = player.getName().copy()
                         .withStyle(ChatFormatting.GREEN)
                         .withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("commands.teamprojecte.members.member_online"))));
@@ -152,10 +172,9 @@ public class TPCommand {
     private static int leave(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = checkPlayer(context);
         TPTeam team = checkInTeam(player);
-        if(team == null)
+        if (team == null)
             return 0;
         team.removeMember(TeamProjectE.getPlayerUUID(player));
-        TeamProjectE.sync(player);
         return Command.SINGLE_SUCCESS;
     }
 
@@ -175,13 +194,11 @@ public class TPCommand {
             return -1;
         }
         TPTeam originalTeam = TPTeam.getTeamByMember(TeamProjectE.getPlayerUUID(player));
-        if(originalTeam != null){
+        if (originalTeam != null) {
             team.addMemberWithKnowledge(originalTeam, player);
             originalTeam.removeMember(TeamProjectE.getPlayerUUID(player));
         } else
             team.addMember(TeamProjectE.getPlayerUUID(player));
-
-        TeamProjectE.sync(player);
 
         context.getSource().sendSuccess(Component.translatable("commands.teamprojecte.invite.accepted").withStyle(ChatFormatting.GREEN), false);
         Component component = Component.translatable("commands.teamprojecte.joined_team", player.getDisplayName()).withStyle(ChatFormatting.GREEN);
@@ -237,7 +254,7 @@ public class TPCommand {
                 Component.translatable("commands.teamprojecte.invite.option.decline")
                         .withStyle(style -> style.applyFormat(ChatFormatting.RED)
                                 .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/team_projecte decline " + team.getUUID())))
-                );
+        );
 
         for (ServerPlayer p : players) {
             INVITATIONS.put(TeamProjectE.getPlayerUUID(p), team.getUUID());
@@ -251,12 +268,12 @@ public class TPCommand {
     }
 
     private static ServerPlayer checkPlayer(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
-        if(context.getSource().getEntity() instanceof ServerPlayer player)
+        if (context.getSource().getEntity() instanceof ServerPlayer player)
             return player;
         throw CommandSourceStack.ERROR_NOT_PLAYER.create();
     }
 
-    private static TPTeam checkInTeam(Player player){
+    private static TPTeam checkInTeam(Player player) {
         TPTeam team = TPTeam.getTeamByMember(TeamProjectE.getPlayerUUID(player));
         if (team == null || (team.getOwner().equals(TeamProjectE.getPlayerUUID(player)) && team.getMembers().isEmpty())) {
             player.sendSystemMessage(Component.translatable("commands.teamprojecte.leave.not_in_team").withStyle(ChatFormatting.RED));
@@ -271,6 +288,52 @@ public class TPCommand {
             return false;
         }
         return true;
+    }
+
+    private static int queryShareEMC(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = checkPlayer(context);
+        TPTeam team = checkInTeam(player);
+        if (team == null)
+            return 0;
+
+        context.getSource().sendSuccess(new TranslatableComponent("commands.teamprojecte.settings.query.sharing_emc." + team.isSharingEMC()), true);
+
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int setShareEMC(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = checkPlayer(context);
+        TPTeam team = checkInTeam(player);
+        if (team == null || !checkOwner(team, player))
+            return 0;
+
+        team.setShareEMC(BoolArgumentType.getBool(context, "value"));
+        context.getSource().sendSuccess(new TranslatableComponent("commands.teamprojecte.settings.set.sharing_emc." + team.isSharingEMC()), true);
+
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int queryShareKnowledge(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = checkPlayer(context);
+        TPTeam team = checkInTeam(player);
+        if (team == null)
+            return 0;
+
+        context.getSource().sendSuccess(new TranslatableComponent("commands.teamprojecte.settings.query.sharing_knowledge." + team.isSharingKnowledge()), true);
+
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int setShareKnowledge(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = checkPlayer(context);
+        TPTeam team = checkInTeam(player);
+        if (team == null || !checkOwner(team, player))
+            return 0;
+
+        team.setShareKnowledge(BoolArgumentType.getBool(context, "value"));
+        context.getSource().sendSuccess(new TranslatableComponent("commands.teamprojecte.settings.set.sharing_knowledge." + team.isSharingKnowledge()), true);
+
+        return Command.SINGLE_SUCCESS;
     }
 
 }

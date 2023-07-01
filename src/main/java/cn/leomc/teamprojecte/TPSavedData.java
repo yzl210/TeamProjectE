@@ -15,21 +15,21 @@ public class TPSavedData extends SavedData {
 
     private static TPSavedData DATA;
 
-    public static TPSavedData getData(){
-        if(DATA == null && ServerLifecycleHooks.getCurrentServer() != null)
+    public static TPSavedData getData() {
+        if (DATA == null && ServerLifecycleHooks.getCurrentServer() != null)
             DATA = ServerLifecycleHooks.getCurrentServer().overworld().getDataStorage()
                     .computeIfAbsent(TPSavedData::new, TPSavedData::create, "teamprojecte");
         return DATA;
     }
 
-    public static void onServerStopped(){
+    public static void onServerStopped() {
         DATA = null;
     }
 
     public Map<UUID, TPTeam> TEAMS = new HashMap<>();
     public final Map<UUID, UUID> PLAYER_TEAM_CACHE = new HashMap<>();
 
-    public void invalidateCache(UUID uuid){
+    public void invalidateCache(UUID uuid) {
         PLAYER_TEAM_CACHE.remove(uuid);
     }
 
@@ -37,19 +37,22 @@ public class TPSavedData extends SavedData {
     }
 
     public TPSavedData(CompoundTag tag) {
-        TeamProjectE.LOGGER.info(tag.toString());
+        TeamProjectE.LOGGER.debug(tag.toString());
+        String version = tag.getString("version");
         for (Tag t : tag.getList("teams", Tag.TAG_COMPOUND)) {
             CompoundTag team = (CompoundTag) t;
-            TEAMS.put(team.getUUID("uuid"), new TPTeam(team.getCompound("team")));
+            TEAMS.put(team.getUUID("uuid"), new TPTeam(team.getCompound("team"), version));
         }
     }
 
-    public static TPSavedData create(){
+    public static TPSavedData create() {
         return new TPSavedData();
     }
 
     @Override
     public @NotNull CompoundTag save(CompoundTag tag) {
+        tag.putString("version", "1");
+
         ListTag teams = new ListTag();
         TEAMS.forEach((uuid, team) -> {
             CompoundTag t = new CompoundTag();

@@ -2,7 +2,6 @@ package cn.leomc.teamprojecte;
 
 import com.google.common.collect.Lists;
 import moze_intel.projecte.api.ItemInfo;
-import moze_intel.projecte.api.capabilities.PECapabilities;
 import net.minecraft.Util;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -14,142 +13,195 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class TPTeam {
-
-
     private final UUID teamUUID;
     private UUID owner;
     private final List<UUID> members;
 
-    private final Set<ItemInfo> knowledge;
-    private BigInteger emc;
-    private boolean fullKnowledge;
+    private KnowledgeData knowledge;
+    private EMCData emc;
 
-    public TPTeam(UUID teamUUID, UUID owner){
+    public TPTeam(UUID teamUUID, UUID owner) {
         this.teamUUID = teamUUID;
         this.owner = owner;
         this.members = new ArrayList<>();
-        this.knowledge = new HashSet<>();
-        this.emc = BigInteger.ZERO;
-        this.fullKnowledge = false;
+        this.knowledge = new KnowledgeData.Sharing();
+        this.emc = new EMCData.Sharing();
     }
 
-    public TPTeam(UUID owner){
+    public TPTeam(UUID owner) {
         this(UUID.randomUUID(), owner);
     }
 
-    public TPTeam(CompoundTag tag){
-        this(tag.getUUID("uuid"), tag.getUUID("owner"));
+    public TPTeam(CompoundTag tag, String version) {
+        this.teamUUID = tag.getUUID("uuid");
+        this.owner = tag.getUUID("owner");
+        this.members = new ArrayList<>();
         this.members.addAll(tag.getList("members", Tag.TAG_COMPOUND).stream().map(t -> ((CompoundTag) t).getUUID("uuid")).toList());
-
-        this.knowledge.addAll(tag.getList("knowledge", Tag.TAG_COMPOUND).stream().map(t -> ItemInfo.read(((CompoundTag)t))).filter(Objects::nonNull).toList());
-        this.emc = new BigInteger(tag.getString("emc"));
-        this.fullKnowledge = tag.getBoolean("fullKnowledge");
+        switch (version) {
+            case "" -> {
+                this.knowledge = new KnowledgeData.Sharing();
+                tag.getList("knowledge", Tag.TAG_COMPOUND).stream().map(t -> ItemInfo.read(((CompoundTag) t))).filter(Objects::nonNull)
+                        .forEach(info -> this.knowledge.addKnowledge(info, Util.NIL_UUID));
+                this.emc = new EMCData.Sharing();
+                this.emc.setEMC(new BigInteger(tag.getString("emc")), Util.NIL_UUID);
+            }
+            case "1" -> {
+                this.knowledge = KnowledgeData.of(tag.getCompound("knowledge"));
+                this.emc = EMCData.of(tag.getCompound("emc"));
+            }
+        }
     }
+
 
     public UUID getUUID() {
         return teamUUID;
     }
 
-    public UUID getOwner(){
+    public UUID getOwner() {
         return owner;
     }
 
-    public void addMemberWithKnowledge(TPTeam originalTeam, Player player){
+    public void addMemberWithKnowledge(TPTeam originalTeam, Player player) {
         markDirty();
-        addMember(TeamProjectE.getPlayerUUID(player));
-        if(originalTeam.getOwner().equals(TeamProjectE.getPlayerUUID(player))){
-            setEmc(getEmc().add(originalTeam.getEmc()));
-            originalTeam.setEmc(BigInteger.ZERO);
-            if(originalTeam.hasFullKnowledge()) {
-                setFullKnowledge(true);
-                originalTeam.setFullKnowledge(false);
+        UUID playerUUID = TeamProjectE.getPlayerUUID(player);
+        addMember(playerUUID);
+
+        if (originalTeam.getOwner().equals(playerUUID)) {
+            setEmc(getEmc(playerUUID).add(originalTeam.getEmc(playerUUID)), playerUUID);
+            originalTeam.setEmc(BigInteger.ZERO, playerUUID);
+            if (originalTeam.hasFullKnowledge(playerUUID)) {
+                setFullKnowledge(true, playerUUID);
+                originalTeam.setFullKnowledge(false, playerUUID);
             }
-            knowledge.addAll(originalTeam.getKnowledge());
-            originalTeam.clearKnowledge();
+            originalTeam.getKnowledge(playerUUID).forEach(k -> knowledge.addKnowledge(k, playerUUID));
+            originalTeam.clearKnowledge(playerUUID);
+        } else {
+            if (!originalTeam.isSharingEMC()) {
+                setEmc(originalTeam.getEmc(playerUUID), playerUUID);
+                originalTeam.setEmc(BigInteger.ZERO, playerUUID);
+            }
+            if (!originalTeam.isSharingKnowledge()) {
+                if (originalTeam.hasFullKnowledge(playerUUID)) {
+                    setFullKnowledge(true, playerUUID);
+                    originalTeam.setFullKnowledge(false, playerUUID);
+                }
+                originalTeam.getKnowledge(playerUUID).forEach(k -> knowledge.addKnowledge(k, playerUUID));
+                originalTeam.clearKnowledge(playerUUID);
+            }
         }
+        sync();
     }
 
-    public void addMember(UUID uuid){
+    public void addMember(UUID uuid) {
         markDirty();
         TPSavedData.getData().invalidateCache(uuid);
         members.add(uuid);
+        sync();
     }
 
-    public void removeMember(UUID uuid){
+    public void removeMember(UUID uuid) {
         markDirty();
         TPSavedData.getData().invalidateCache(uuid);
-        if(owner.equals(uuid)){
-            if(members.isEmpty()){
+        knowledge.removeMember(uuid);
+        emc.removeMember(uuid);
+        if (owner.equals(uuid)) {
+            if (members.isEmpty()) {
                 TPSavedData.getData().TEAMS.remove(teamUUID);
                 return;
             }
             UUID newOwner = members.get(ThreadLocalRandom.current().nextInt(members.size()));
             owner = newOwner;
             members.remove(newOwner);
-        }
-        else
+        } else
             members.remove(uuid);
+        sync(uuid);
     }
 
-    public void transferOwner(UUID newOwner){
-        if(owner.equals(newOwner) || !members.contains(newOwner))
+    public void transferOwner(UUID newOwner) {
+        if (owner.equals(newOwner) || !members.contains(newOwner))
             return;
         members.add(owner);
         owner = newOwner;
+        members.remove(newOwner);
     }
 
-    public List<UUID> getMembers(){
+    public List<UUID> getMembers() {
         return List.copyOf(members);
     }
 
-    public List<UUID> getAll(){
+    public List<UUID> getAll() {
         return Lists.asList(owner, members.toArray(UUID[]::new));
     }
 
 
-    public boolean addKnowledge(ItemInfo info){
+    public boolean addKnowledge(ItemInfo info, UUID player) {
         markDirty();
-        return knowledge.add(info);
+        return knowledge.addKnowledge(info, player);
     }
 
-    public void removeKnowledge(ItemInfo info){
+    public void removeKnowledge(ItemInfo info, UUID player) {
         markDirty();
-        knowledge.remove(info);
+        knowledge.removeKnowledge(info, player);
     }
 
-    public void clearKnowledge(){
+    public void clearKnowledge(UUID player) {
         markDirty();
-        knowledge.clear();
+        knowledge.clearKnowledge(player);
     }
 
 
-    public Set<ItemInfo> getKnowledge() {
-        return Set.copyOf(knowledge);
+    public Set<ItemInfo> getKnowledge(UUID player) {
+        return knowledge.getKnowledge(player);
     }
 
-    public void setEmc(BigInteger emc) {
+    public void setEmc(BigInteger emc, UUID player) {
         markDirty();
-        this.emc = emc;
+        this.emc.setEMC(emc, player);
     }
 
-    public BigInteger getEmc() {
-        return emc;
+    public BigInteger getEmc(UUID player) {
+        return emc.getEMC(player);
     }
 
-    public void setFullKnowledge(boolean fullKnowledge) {
+    public void setFullKnowledge(boolean fullKnowledge, UUID player) {
         markDirty();
-        this.fullKnowledge = fullKnowledge;
+        knowledge.setFullKnowledge(fullKnowledge, player);
     }
 
-    public boolean hasFullKnowledge() {
-        return fullKnowledge;
+    public boolean hasFullKnowledge(UUID player) {
+        return knowledge.hasFullKnowledge(player);
     }
 
-    public void markDirty(){
+    public boolean isSharingEMC() {
+        return emc instanceof EMCData.Sharing;
+    }
+
+    public boolean isSharingKnowledge() {
+        return knowledge instanceof KnowledgeData.Sharing;
+    }
+
+
+    public void setShareEMC(boolean share) {
+        if (isSharingEMC() == share)
+            return;
+        emc = emc.convert(getOwner());
+        markDirty();
+        sync();
+    }
+
+    public void setShareKnowledge(boolean share) {
+        if (isSharingKnowledge() == share)
+            return;
+        knowledge = knowledge.convert(getOwner());
+        markDirty();
+        sync();
+    }
+
+    public void markDirty() {
         TPSavedData.getData().setDirty();
     }
 
-    public CompoundTag save(){
+    public CompoundTag save() {
         CompoundTag tag = new CompoundTag();
         tag.putUUID("uuid", teamUUID);
         tag.putUUID("owner", owner);
@@ -161,25 +213,21 @@ public class TPTeam {
         }
         tag.put("members", list);
 
-        ListTag itemInfos = new ListTag();
-        for (ItemInfo info : knowledge)
-            itemInfos.add(info.write(new CompoundTag()));
-        tag.put("knowledge", itemInfos);
-        tag.putString("emc", emc.toString());
-        tag.putBoolean("fullKnowledge", fullKnowledge);
+        tag.put("knowledge", knowledge.save());
+        tag.put("emc", emc.save());
 
         return tag;
     }
 
 
-    public static TPTeam getOrCreateTeam(UUID uuid){
+    public static TPTeam getOrCreateTeam(UUID uuid) {
         TPTeam team = getTeamByMember(uuid);
-        if(team == null)
+        if (team == null)
             team = createTeam(uuid);
         return team;
     }
 
-    public static TPTeam createTeam(UUID uuid){
+    public static TPTeam createTeam(UUID uuid) {
         TPTeam team = new TPTeam(uuid);
         TPSavedData.getData().TEAMS.put(team.getUUID(), team);
         TPSavedData.getData().setDirty();
@@ -190,24 +238,33 @@ public class TPTeam {
         return TPSavedData.getData().TEAMS.get(uuid);
     }
 
-    public static boolean isInTeam(UUID uuid){
+    public static boolean isInTeam(UUID uuid) {
         return getTeamByMember(uuid) != null;
     }
 
-    public static TPTeam getTeamByMember(UUID uuid){
+    public static TPTeam getTeamByMember(UUID uuid) {
         UUID teamUUID = TPSavedData.getData().PLAYER_TEAM_CACHE.get(uuid);
 
-        if(teamUUID == null)
+        if (teamUUID == null)
             for (Map.Entry<UUID, TPTeam> entry : TPSavedData.getData().TEAMS.entrySet()) {
-                if(entry.getValue().getAll().contains(uuid)) {
+                if (entry.getValue().getAll().contains(uuid)) {
                     teamUUID = entry.getKey();
                     TPSavedData.getData().PLAYER_TEAM_CACHE.put(uuid, teamUUID);
                     break;
                 }
             }
 
-        if(teamUUID != null)
+        if (teamUUID != null)
             return TPSavedData.getData().TEAMS.get(teamUUID);
         return null;
     }
+
+    public void sync() {
+        TeamProjectE.getAllOnline(getAll()).forEach(TeamProjectE::sync);
+    }
+
+    public void sync(UUID uuid) {
+        TeamProjectE.getAllOnline(List.of(uuid)).forEach(TeamProjectE::sync);
+    }
+
 }

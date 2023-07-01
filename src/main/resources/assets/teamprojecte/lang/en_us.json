@@ -21,5 +21,13 @@
   "commands.teamprojecte.transfer_ownership.not_in_team": "This player is not in your team!",
   "commands.teamprojecte.transfer_ownership.already_owner": "Cannot transfer to yourself!",
   "commands.teamprojecte.transfer_ownership.new_owner": "You are now the owner of this team!",
-  "commands.teamprojecte.transfer_ownership.success": "Successfully transferred ownership to %s"
+  "commands.teamprojecte.transfer_ownership.success": "Successfully transferred ownership to %s",
+  "commands.teamprojecte.settings.query.sharing_emc.false": "This team is currently not sharing EMC",
+  "commands.teamprojecte.settings.query.sharing_emc.true": "This team is currently sharing EMC",
+  "commands.teamprojecte.settings.query.sharing_knowledge.false": "This team is currently not sharing knowledge",
+  "commands.teamprojecte.settings.query.sharing_knowledge.true": "This team is currently sharing knowledge",
+  "commands.teamprojecte.settings.set.sharing_emc.false": "Set EMC sharing to false",
+  "commands.teamprojecte.settings.set.sharing_emc.true": "Set EMC sharing to true",
+  "commands.teamprojecte.settings.set.sharing_knowledge.false": "Set knowledge sharing to false",
+  "commands.teamprojecte.settings.set.sharing_knowledge.true": "Set knowledge sharing to true"
 }

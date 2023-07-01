@@ -18,9 +18,9 @@ public class KnowledgeEventsProviderMixin {
     private static Field PLAYER_FIELD;
 
     static {
-        try{
+        try {
             PLAYER_FIELD = Class.forName("moze_intel.projecte.impl.capability.KnowledgeImpl$DefaultImpl").getDeclaredField("player");
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -31,7 +31,7 @@ public class KnowledgeEventsProviderMixin {
             index = 0,
             remap = false)
     private static INBTSerializable<CompoundTag> onInit(INBTSerializable<CompoundTag> internal) throws IllegalAccessException {
-        if(Thread.currentThread().getThreadGroup() == SidedThreadGroups.SERVER && internal instanceof KnowledgeImpl.DefaultImpl impl)
+        if (Thread.currentThread().getThreadGroup() == SidedThreadGroups.SERVER && internal instanceof KnowledgeImpl.DefaultImpl impl)
             return new TeamKnowledgeProvider((ServerPlayer) PLAYER_FIELD.get(impl));
         return internal;
     }

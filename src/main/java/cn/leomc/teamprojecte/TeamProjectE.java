@@ -28,12 +28,12 @@ public class TeamProjectE {
     }
 
     @SubscribeEvent
-    public void onRegisterCommand(RegisterCommandsEvent event){
+    public void onRegisterCommand(RegisterCommandsEvent event) {
         TPCommand.register(event.getDispatcher());
     }
 
     @SubscribeEvent
-    public void onServerStopped(ServerStoppedEvent event){
+    public void onServerStopped(ServerStoppedEvent event) {
         TPCommand.INVITATIONS.clear();
         TPSavedData.onServerStopped();
     }
@@ -44,28 +44,29 @@ public class TeamProjectE {
             sync(player);
     }
 
-    public static List<ServerPlayer> getAllOnline(List<UUID> uuids){
+    public static List<ServerPlayer> getAllOnline(List<UUID> uuids) {
         return uuids.stream()
                 .map(uuid -> ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayer(uuid))
                 .filter(Objects::nonNull)
                 .toList();
     }
 
-    public static void sync(ServerPlayer player){
+    public static void sync(ServerPlayer player) {
         player.getCapability(PECapabilities.KNOWLEDGE_CAPABILITY).ifPresent(provider -> provider.sync(player));
     }
 
-    public static List<ServerPlayer> getOnlineTeamMembers(UUID uuid){
+    public static List<ServerPlayer> getOnlineTeamMembers(UUID uuid) {
         return getOnlineTeamMembers(uuid, true);
     }
-    public static List<ServerPlayer> getOnlineTeamMembers(UUID uuid, boolean includeOwner){
+
+    public static List<ServerPlayer> getOnlineTeamMembers(UUID uuid, boolean includeOwner) {
         TPTeam team = TPTeam.getOrCreateTeam(uuid);
         return TeamProjectE.getAllOnline(includeOwner ? team.getAll() : team.getMembers());
     }
 
-    public static UUID getPlayerUUID(Player player){
+    public static UUID getPlayerUUID(Player player) {
         UUID uuid = player.getGameProfile().getId();
-        if(uuid == null)
+        if (uuid == null)
             uuid = player.getUUID();
         return uuid;
     }
