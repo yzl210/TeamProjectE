@@ -14,7 +14,7 @@ public interface KnowledgeData {
 
     boolean addKnowledge(ItemInfo info, UUID player);
 
-    void removeKnowledge(ItemInfo info, UUID player);
+    boolean removeKnowledge(ItemInfo info, UUID player);
 
     void clearKnowledge(UUID player);
 
@@ -56,8 +56,8 @@ public interface KnowledgeData {
         }
 
         @Override
-        public void removeKnowledge(ItemInfo info, UUID player) {
-            knowledge.remove(info);
+        public boolean removeKnowledge(ItemInfo info, UUID player) {
+            return knowledge.remove(info);
         }
 
         @Override
@@ -128,9 +128,10 @@ public interface KnowledgeData {
         }
 
         @Override
-        public void removeKnowledge(ItemInfo info, UUID player) {
+        public boolean removeKnowledge(ItemInfo info, UUID player) {
             if (knowledge.containsKey(player))
-                knowledge.get(player).remove(info);
+                return knowledge.get(player).remove(info);
+            return false;
         }
 
         @Override

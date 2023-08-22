@@ -139,9 +139,9 @@ public class TPTeam {
         return knowledge.addKnowledge(info, player);
     }
 
-    public void removeKnowledge(ItemInfo info, UUID player) {
+    public boolean removeKnowledge(ItemInfo info, UUID player) {
         markDirty();
-        knowledge.removeKnowledge(info, player);
+        return knowledge.removeKnowledge(info, player);
     }
 
     public void clearKnowledge(UUID player) {
