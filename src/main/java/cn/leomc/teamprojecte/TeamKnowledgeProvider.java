@@ -167,7 +167,7 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
     }
 
     private boolean tryRemove(@NotNull ItemInfo cleanedInfo) {
-        if (getTeam().getKnowledge(playerUUID.get()).remove(cleanedInfo)) {
+        if (getTeam().removeKnowledge(cleanedInfo, playerUUID.get())) {
             fireChangedEvent();
             //syncKnowledgeChange(playerUUID, cleanedInfo, false);
             return true;
