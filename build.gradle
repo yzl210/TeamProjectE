@@ -16,7 +16,7 @@ plugins {
 }
 
 group = 'cn.leomc'
-version = '1.1.1'
+version = '1.1.2'
 
 java {
     archivesBaseName = "teamprojecte-${mc_version}"
