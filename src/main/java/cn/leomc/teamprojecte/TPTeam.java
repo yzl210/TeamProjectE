@@ -73,7 +73,7 @@ public class TPTeam {
                 setFullKnowledge(true, playerUUID);
                 originalTeam.setFullKnowledge(false, playerUUID);
             }
-            originalTeam.getKnowledge(playerUUID).forEach(k -> knowledge.addKnowledge(k, playerUUID));
+            originalTeam.getKnowledge(playerUUID).forEach(k -> addKnowledge(k, playerUUID));
             originalTeam.clearKnowledge(playerUUID);
         } else {
             if (!originalTeam.isSharingEMC()) {
@@ -85,10 +85,11 @@ public class TPTeam {
                     setFullKnowledge(true, playerUUID);
                     originalTeam.setFullKnowledge(false, playerUUID);
                 }
-                originalTeam.getKnowledge(playerUUID).forEach(k -> knowledge.addKnowledge(k, playerUUID));
+                originalTeam.getKnowledge(playerUUID).forEach(k -> addKnowledge(k, playerUUID));
                 originalTeam.clearKnowledge(playerUUID);
             }
         }
+        originalTeam.removeMember(playerUUID);
         sync();
     }
 
@@ -106,7 +107,7 @@ public class TPTeam {
         emc.removeMember(uuid);
         if (owner.equals(uuid)) {
             if (members.isEmpty()) {
-                TPSavedData.getData().TEAMS.remove(teamUUID);
+                TPSavedData.getData().teams.remove(teamUUID);
                 return;
             }
             UUID newOwner = members.get(ThreadLocalRandom.current().nextInt(members.size()));
@@ -229,13 +230,13 @@ public class TPTeam {
 
     public static TPTeam createTeam(UUID uuid) {
         TPTeam team = new TPTeam(uuid);
-        TPSavedData.getData().TEAMS.put(team.getUUID(), team);
+        TPSavedData.getData().teams.put(team.getUUID(), team);
         TPSavedData.getData().setDirty();
         return team;
     }
 
     public static TPTeam getTeam(UUID uuid) {
-        return TPSavedData.getData().TEAMS.get(uuid);
+        return TPSavedData.getData().teams.get(uuid);
     }
 
     public static boolean isInTeam(UUID uuid) {
@@ -243,19 +244,19 @@ public class TPTeam {
     }
 
     public static TPTeam getTeamByMember(UUID uuid) {
-        UUID teamUUID = TPSavedData.getData().PLAYER_TEAM_CACHE.get(uuid);
+        UUID teamUUID = TPSavedData.getData().playerTeamCache.get(uuid);
 
         if (teamUUID == null)
-            for (Map.Entry<UUID, TPTeam> entry : TPSavedData.getData().TEAMS.entrySet()) {
+            for (Map.Entry<UUID, TPTeam> entry : TPSavedData.getData().teams.entrySet()) {
                 if (entry.getValue().getAll().contains(uuid)) {
                     teamUUID = entry.getKey();
-                    TPSavedData.getData().PLAYER_TEAM_CACHE.put(uuid, teamUUID);
+                    TPSavedData.getData().playerTeamCache.put(uuid, teamUUID);
                     break;
                 }
             }
 
         if (teamUUID != null)
-            return TPSavedData.getData().TEAMS.get(teamUUID);
+            return TPSavedData.getData().teams.get(teamUUID);
         return null;
     }
 

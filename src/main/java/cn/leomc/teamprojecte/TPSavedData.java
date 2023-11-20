@@ -15,38 +15,34 @@ public class TPSavedData extends SavedData {
 
     private static TPSavedData DATA;
 
-    public static TPSavedData getData() {
+    static TPSavedData getData() {
         if (DATA == null && ServerLifecycleHooks.getCurrentServer() != null)
             DATA = ServerLifecycleHooks.getCurrentServer().overworld().getDataStorage()
-                    .computeIfAbsent(TPSavedData::new, TPSavedData::create, "teamprojecte");
+                    .computeIfAbsent(TPSavedData::new, TPSavedData::new, "teamprojecte");
         return DATA;
     }
 
-    public static void onServerStopped() {
+    static void onServerStopped() {
         DATA = null;
     }
 
-    public Map<UUID, TPTeam> TEAMS = new HashMap<>();
-    public final Map<UUID, UUID> PLAYER_TEAM_CACHE = new HashMap<>();
+    final Map<UUID, TPTeam> teams = new HashMap<>();
+    final Map<UUID, UUID> playerTeamCache = new HashMap<>();
 
-    public void invalidateCache(UUID uuid) {
-        PLAYER_TEAM_CACHE.remove(uuid);
+    void invalidateCache(UUID uuid) {
+        playerTeamCache.remove(uuid);
     }
 
-    public TPSavedData() {
+    TPSavedData() {
     }
 
-    public TPSavedData(CompoundTag tag) {
+    TPSavedData(CompoundTag tag) {
         TeamProjectE.LOGGER.debug(tag.toString());
         String version = tag.getString("version");
         for (Tag t : tag.getList("teams", Tag.TAG_COMPOUND)) {
             CompoundTag team = (CompoundTag) t;
-            TEAMS.put(team.getUUID("uuid"), new TPTeam(team.getCompound("team"), version));
+            teams.put(team.getUUID("uuid"), new TPTeam(team.getCompound("team"), version));
         }
-    }
-
-    public static TPSavedData create() {
-        return new TPSavedData();
     }
 
     @Override
@@ -54,7 +50,7 @@ public class TPSavedData extends SavedData {
         tag.putString("version", "1");
 
         ListTag teams = new ListTag();
-        TEAMS.forEach((uuid, team) -> {
+        this.teams.forEach((uuid, team) -> {
             CompoundTag t = new CompoundTag();
             t.putUUID("uuid", uuid);
             t.put("team", team.save());
