@@ -20,7 +20,7 @@ group = 'cn.leomc'
 version = '1.1.2'
 
 java {
-    archivesBaseName = 'teamprojecte'
+    archivesBaseName = "teamprojecte-${mc_version}"
     toolchain.languageVersion = JavaLanguageVersion.of(17)
 }
 
@@ -149,8 +149,8 @@ dependencies {
     // The userdev artifact is a special name and will get all sorts of transformations applied to it.
     minecraft 'net.minecraftforge:forge:1.18.2-40.1.80'
 
-    implementation fg.deobf('curse.maven:projecte-226410:3722831')
-    runtimeOnly fg.deobf('curse.maven:projectex-579177:4380542')
+    implementation fg.deobf('curse.maven:projecte-226410:4860857')
+    runtimeOnly fg.deobf('curse.maven:projectex-579177:4802915')
     //runtimeOnly fg.deobf("curse.maven:exex-681874")
 
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
