@@ -37,14 +37,14 @@ public class TPCommand {
                         .then(Commands.argument("players", EntityArgument.players())
                                 .executes(TPCommand::invite)))
                 .then(Commands.literal("leave")
-                        .requires(TPCommand::requiresPlayer)
+                        .requires(TPCommand::requiresInTeam)
                         .executes(TPCommand::leave))
                 .then(Commands.literal("transfer_ownership")
                         .requires(TPCommand::requiresOwner)
                         .then(Commands.argument("member", EntityArgument.player())
                                 .executes(TPCommand::transferOwnership)))
                 .then(Commands.literal("members")
-                        .requires(TPCommand::requiresPlayer)
+                        .requires(TPCommand::requiresInTeam)
                         .executes(TPCommand::members))
                 .then(Commands.literal("kick")
                         .requires(TPCommand::requiresOwner)
@@ -79,13 +79,25 @@ public class TPCommand {
         return stack.getEntity() instanceof ServerPlayer;
     }
 
-    private static boolean requiresOwner(CommandSourceStack stack) {
+
+    private static boolean requiresInTeam(CommandSourceStack stack) {
         if (stack.getEntity() instanceof ServerPlayer player) {
             TPTeam team = TPTeam.getTeamByMember(TeamProjectE.getPlayerUUID(player));
-            return team == null || TeamProjectE.getPlayerUUID(player).equals(team.getOwner());
+            return team != null && (!team.getOwner().equals(TeamProjectE.getPlayerUUID(player)) || !team.getMembers().isEmpty());
         }
         return false;
     }
+
+    private static boolean requiresOwner(CommandSourceStack stack) {
+        if (!requiresInTeam(stack))
+            return false;
+        if (stack.getEntity() instanceof ServerPlayer player) {
+            TPTeam team = TPTeam.getTeamByMember(TeamProjectE.getPlayerUUID(player));
+            return team != null && TeamProjectE.getPlayerUUID(player).equals(team.getOwner());
+        }
+        return false;
+    }
+
 
     private static int transferOwnership(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = checkPlayer(context);
@@ -195,10 +207,9 @@ public class TPCommand {
             return -1;
         }
         TPTeam originalTeam = TPTeam.getTeamByMember(TeamProjectE.getPlayerUUID(player));
-        if (originalTeam != null) {
+        if (originalTeam != null)
             team.addMemberWithKnowledge(originalTeam, player);
-            originalTeam.removeMember(TeamProjectE.getPlayerUUID(player));
-        } else
+        else
             team.addMember(TeamProjectE.getPlayerUUID(player));
 
         context.getSource().sendSuccess(new TranslatableComponent("commands.teamprojecte.invite.accepted").withStyle(ChatFormatting.GREEN), false);
