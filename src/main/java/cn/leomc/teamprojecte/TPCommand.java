@@ -106,7 +106,7 @@ public class TPCommand {
 
         team.transferOwner(newOwnerUUID);
         newOwner.sendSystemMessage(Component.translatable("commands.teamprojecte.transfer_ownership.new_owner").withStyle(ChatFormatting.GREEN));
-        context.getSource().sendSuccess(Component.translatable("commands.teamprojecte.transfer_ownership.success", newOwner.getName()), true);
+        context.getSource().sendSuccess(() -> Component.translatable("commands.teamprojecte.transfer_ownership.success", newOwner.getName()), true);
 
         return Command.SINGLE_SUCCESS;
     }
@@ -126,7 +126,7 @@ public class TPCommand {
         });
 
         if (!kick.isEmpty())
-            context.getSource().sendSuccess(Component.translatable("commands.teamprojecte.kick.success", kick.size()), true);
+            context.getSource().sendSuccess(() -> Component.translatable("commands.teamprojecte.kick.success", kick.size()), true);
         else
             context.getSource().sendFailure(Component.translatable("commands.teamprojecte.players_not_found"));
 
@@ -200,7 +200,7 @@ public class TPCommand {
         } else
             team.addMember(TeamProjectE.getPlayerUUID(player));
 
-        context.getSource().sendSuccess(Component.translatable("commands.teamprojecte.invite.accepted").withStyle(ChatFormatting.GREEN), false);
+        context.getSource().sendSuccess(() -> Component.translatable("commands.teamprojecte.invite.accepted").withStyle(ChatFormatting.GREEN), false);
         Component component = Component.translatable("commands.teamprojecte.joined_team", player.getDisplayName()).withStyle(ChatFormatting.GREEN);
         TeamProjectE.getAllOnline(team.getAll()).forEach(p -> p.sendSystemMessage(component));
 
@@ -261,7 +261,7 @@ public class TPCommand {
             p.sendSystemMessage(component);
         }
         if (!players.isEmpty())
-            context.getSource().sendSuccess(Component.translatable("commands.teamprojecte.invite.success", players.size()), true);
+            context.getSource().sendSuccess(() -> Component.translatable("commands.teamprojecte.invite.success", players.size()), true);
         else
             context.getSource().sendFailure(Component.translatable("commands.teamprojecte.players_not_found"));
         return players.size();
@@ -296,7 +296,7 @@ public class TPCommand {
         if (team == null)
             return 0;
 
-        context.getSource().sendSuccess(Component.translatable("commands.teamprojecte.settings.query.sharing_emc." + team.isSharingEMC()), true);
+        context.getSource().sendSuccess(() -> Component.translatable("commands.teamprojecte.settings.query.sharing_emc." + team.isSharingEMC()), true);
 
         return Command.SINGLE_SUCCESS;
     }
@@ -308,7 +308,7 @@ public class TPCommand {
             return 0;
 
         team.setShareEMC(BoolArgumentType.getBool(context, "value"));
-        context.getSource().sendSuccess(Component.translatable("commands.teamprojecte.settings.set.sharing_emc." + team.isSharingEMC()), true);
+        context.getSource().sendSuccess(() -> Component.translatable("commands.teamprojecte.settings.set.sharing_emc." + team.isSharingEMC()), true);
 
         return Command.SINGLE_SUCCESS;
     }
@@ -319,7 +319,7 @@ public class TPCommand {
         if (team == null)
             return 0;
 
-        context.getSource().sendSuccess(Component.translatable("commands.teamprojecte.settings.query.sharing_knowledge." + team.isSharingKnowledge()), true);
+        context.getSource().sendSuccess(() -> Component.translatable("commands.teamprojecte.settings.query.sharing_knowledge." + team.isSharingKnowledge()), true);
 
         return Command.SINGLE_SUCCESS;
     }
@@ -331,7 +331,7 @@ public class TPCommand {
             return 0;
 
         team.setShareKnowledge(BoolArgumentType.getBool(context, "value"));
-        context.getSource().sendSuccess(Component.translatable("commands.teamprojecte.settings.set.sharing_knowledge." + team.isSharingKnowledge()), true);
+        context.getSource().sendSuccess(() -> Component.translatable("commands.teamprojecte.settings.set.sharing_knowledge." + team.isSharingKnowledge()), true);
 
         return Command.SINGLE_SUCCESS;
     }

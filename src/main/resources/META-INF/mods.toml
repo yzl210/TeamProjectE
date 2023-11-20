@@ -1,5 +1,5 @@
 modLoader = "javafml"
-loaderVersion = "[43,)"
+loaderVersion = "[47,)"
 license = "GNU GPL 3.0"
 issueTrackerURL="https://github.com/yzl210/TeamProjectE/issues"
 [[mods]]
@@ -14,19 +14,19 @@ ProjectE knowledge and EMC syncing!
 [[dependencies.teamprojecte]]
 modId = "forge"
 mandatory = true
-versionRange = "[43,)"
+versionRange = "[47,)"
 ordering = "NONE"
 side = "BOTH"
 [[dependencies.teamprojecte]]
 modId = "minecraft"
 mandatory = true
-versionRange = "[1.19.2,)"
+versionRange = "[1.20.1]"
 ordering = "NONE"
 side = "BOTH"
 [[dependencies.teamprojecte]]
 modId = "projecte"
 mandatory = true
-versionRange = "[1.0.1,)"
+versionRange = "[1.0.0,)"
 ordering = "NONE"
 side = "BOTH"
 
