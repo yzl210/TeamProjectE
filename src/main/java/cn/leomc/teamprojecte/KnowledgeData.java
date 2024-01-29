@@ -1,11 +1,11 @@
 package cn.leomc.teamprojecte;
 
 import moze_intel.projecte.api.ItemInfo;
-import net.minecraft.Util;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.NbtUtils;
-import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.ListNBT;
+import net.minecraft.nbt.NBTUtil;
+import net.minecraft.util.Util;
+import net.minecraftforge.common.util.Constants;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -28,11 +28,11 @@ public interface KnowledgeData {
 
     KnowledgeData convert(UUID owner);
 
-    void load(CompoundTag tag);
+    void load(CompoundNBT tag);
 
-    CompoundTag save();
+    CompoundNBT save();
 
-    static KnowledgeData of(CompoundTag tag) {
+    static KnowledgeData of(CompoundNBT tag) {
         KnowledgeData data = null;
         String type = tag.getString("type");
         if (Sharing.getType().equals(type))
@@ -67,7 +67,7 @@ public interface KnowledgeData {
 
         @Override
         public Set<ItemInfo> getKnowledge(UUID player) {
-            return Set.copyOf(knowledge);
+            return Collections.unmodifiableSet(knowledge);
         }
 
         @Override
@@ -93,18 +93,18 @@ public interface KnowledgeData {
         }
 
         @Override
-        public void load(CompoundTag tag) {
+        public void load(CompoundNBT tag) {
             knowledge.clear();
-            knowledge.addAll(tag.getList("knowledge", Tag.TAG_COMPOUND).stream().map(t -> ItemInfo.read(((CompoundTag) t))).filter(Objects::nonNull).toList());
+            knowledge.addAll(tag.getList("knowledge", Constants.NBT.TAG_COMPOUND).stream().map(t -> ItemInfo.read(((CompoundNBT) t))).filter(Objects::nonNull).collect(Collectors.toList()));
             fullKnowledge = tag.getBoolean("fullKnowledge");
         }
 
         @Override
-        public CompoundTag save() {
-            CompoundTag tag = new CompoundTag();
-            ListTag itemInfos = new ListTag();
+        public CompoundNBT save() {
+            CompoundNBT tag = new CompoundNBT();
+            ListNBT itemInfos = new ListNBT();
             for (ItemInfo info : knowledge)
-                itemInfos.add(info.write(new CompoundTag()));
+                itemInfos.add(info.write(new CompoundNBT()));
             tag.put("knowledge", itemInfos);
             tag.putBoolean("fullKnowledge", fullKnowledge);
             tag.putString("type", getType());
@@ -141,7 +141,7 @@ public interface KnowledgeData {
 
         @Override
         public Set<ItemInfo> getKnowledge(UUID player) {
-            return Set.copyOf(knowledge.getOrDefault(player, Collections.emptySet()));
+            return Collections.unmodifiableSet(knowledge.getOrDefault(player, Collections.emptySet()));
         }
 
         @Override
@@ -172,35 +172,35 @@ public interface KnowledgeData {
         }
 
         @Override
-        public void load(CompoundTag tag) {
+        public void load(CompoundNBT tag) {
             knowledge.clear();
             fullKnowledge.clear();
-            tag.getList("knowledge", Tag.TAG_COMPOUND).forEach(t -> {
-                CompoundTag ct = (CompoundTag) t;
+            tag.getList("knowledge", Constants.NBT.TAG_COMPOUND).forEach(t -> {
+                CompoundNBT ct = (CompoundNBT) t;
                 knowledge.put(ct.getUUID("player"),
-                        ct.getList("knowledge", Tag.TAG_COMPOUND).stream().map(i -> ItemInfo.read(((CompoundTag) i))).filter(Objects::nonNull).collect(Collectors.toSet()));
+                        ct.getList("knowledge", Constants.NBT.TAG_COMPOUND).stream().map(i -> ItemInfo.read(((CompoundNBT) i))).filter(Objects::nonNull).collect(Collectors.toSet()));
             });
 
-            tag.getList("fullKnowledge", Tag.TAG_INT_ARRAY).forEach(t -> fullKnowledge.add(NbtUtils.loadUUID(t)));
+            tag.getList("fullKnowledge", Constants.NBT.TAG_INT_ARRAY).forEach(t -> fullKnowledge.add(NBTUtil.loadUUID(t)));
         }
 
         @Override
-        public CompoundTag save() {
-            CompoundTag tag = new CompoundTag();
+        public CompoundNBT save() {
+            CompoundNBT tag = new CompoundNBT();
 
-            ListTag k = new ListTag();
+            ListNBT k = new ListNBT();
             knowledge.forEach((uuid, knowledge) -> {
-                CompoundTag t = new CompoundTag();
+                CompoundNBT t = new CompoundNBT();
                 t.putUUID("player", uuid);
-                ListTag list = new ListTag();
-                knowledge.forEach(info -> list.add(info.write(new CompoundTag())));
+                ListNBT list = new ListNBT();
+                knowledge.forEach(info -> list.add(info.write(new CompoundNBT())));
                 t.put("knowledge", list);
                 k.add(t);
             });
             tag.put("knowledge", k);
 
-            ListTag fk = new ListTag();
-            fullKnowledge.forEach(uuid -> fk.add(NbtUtils.createUUID(uuid)));
+            ListNBT fk = new ListNBT();
+            fullKnowledge.forEach(uuid -> fk.add(NBTUtil.createUUID(uuid)));
             tag.put("fullKnowledge", fk);
 
             tag.putString("type", getType());

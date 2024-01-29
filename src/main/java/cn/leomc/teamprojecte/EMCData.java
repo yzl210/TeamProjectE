@@ -1,9 +1,9 @@
 package cn.leomc.teamprojecte;
 
-import net.minecraft.Util;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.ListNBT;
+import net.minecraft.util.Util;
+import net.minecraftforge.common.util.Constants;
 
 import java.math.BigInteger;
 import java.util.HashMap;
@@ -19,11 +19,11 @@ public interface EMCData {
 
     EMCData convert(UUID owner);
 
-    void load(CompoundTag tag);
+    void load(CompoundNBT tag);
 
-    CompoundTag save();
+    CompoundNBT save();
 
-    static EMCData of(CompoundTag tag) {
+    static EMCData of(CompoundNBT tag) {
         EMCData data = null;
         String type = tag.getString("type");
         if (Sharing.getType().equals(type))
@@ -62,13 +62,13 @@ public interface EMCData {
         }
 
         @Override
-        public void load(CompoundTag tag) {
+        public void load(CompoundNBT tag) {
             emc = new BigInteger(tag.getString("emc"));
         }
 
         @Override
-        public CompoundTag save() {
-            CompoundTag tag = new CompoundTag();
+        public CompoundNBT save() {
+            CompoundNBT tag = new CompoundNBT();
             tag.putString("emc", emc.toString());
             tag.putString("type", getType());
             return tag;
@@ -105,20 +105,20 @@ public interface EMCData {
         }
 
         @Override
-        public void load(CompoundTag tag) {
+        public void load(CompoundNBT tag) {
             emc.clear();
-            tag.getList("emc", Tag.TAG_COMPOUND).forEach((t) -> {
-                CompoundTag ct = (CompoundTag) t;
+            tag.getList("emc", Constants.NBT.TAG_COMPOUND).forEach((t) -> {
+                CompoundNBT ct = (CompoundNBT) t;
                 emc.put(ct.getUUID("player"), new BigInteger(ct.getString("emc")));
             });
         }
 
         @Override
-        public CompoundTag save() {
-            CompoundTag tag = new CompoundTag();
-            ListTag list = new ListTag();
+        public CompoundNBT save() {
+            CompoundNBT tag = new CompoundNBT();
+            ListNBT list = new ListNBT();
             emc.forEach((uuid, emc) -> {
-                CompoundTag t = new CompoundTag();
+                CompoundNBT t = new CompoundNBT();
                 t.putUUID("player", uuid);
                 t.putString("emc", emc.toString());
                 list.add(t);

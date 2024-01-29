@@ -4,7 +4,7 @@ import cn.leomc.teamprojecte.TeamKnowledgeProvider;
 import com.google.common.base.Preconditions;
 import moze_intel.projecte.api.capabilities.IKnowledgeProvider;
 import moze_intel.projecte.impl.TransmutationOffline;
-import net.minecraftforge.fml.util.thread.SidedThreadGroups;
+import net.minecraftforge.fml.common.thread.SidedThreadGroups;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;

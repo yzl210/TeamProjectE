@@ -2,8 +2,8 @@ package cn.leomc.teamprojecte;
 
 import com.google.common.base.Suppliers;
 import moze_intel.projecte.api.ItemInfo;
+import moze_intel.projecte.api.ProjectEAPI;
 import moze_intel.projecte.api.capabilities.IKnowledgeProvider;
-import moze_intel.projecte.api.capabilities.PECapabilities;
 import moze_intel.projecte.api.event.PlayerKnowledgeChangeEvent;
 import moze_intel.projecte.emc.EMCMappingHandler;
 import moze_intel.projecte.emc.nbt.NBTManager;
@@ -13,17 +13,17 @@ import moze_intel.projecte.network.packets.to_client.knowledge.KnowledgeSyncChan
 import moze_intel.projecte.network.packets.to_client.knowledge.KnowledgeSyncEmcPKT;
 import moze_intel.projecte.network.packets.to_client.knowledge.KnowledgeSyncInputsAndLocksPKT;
 import moze_intel.projecte.network.packets.to_client.knowledge.KnowledgeSyncPKT;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.ListNBT;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.server.ServerLifecycleHooks;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import net.minecraftforge.items.ItemStackHandler;
-import net.minecraftforge.server.ServerLifecycleHooks;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.math.BigInteger;
 import java.util.*;
 import java.util.function.Supplier;
@@ -34,7 +34,7 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
 
     private final ItemStackHandler inputLocks = new ItemStackHandler(9);
 
-    public TeamKnowledgeProvider(@NotNull ServerPlayer player) {
+    public TeamKnowledgeProvider(@Nonnull ServerPlayerEntity player) {
         this.playerUUID = Suppliers.memoize(() -> TeamProjectE.getPlayerUUID(player));
     }
 
@@ -79,7 +79,7 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
     }
 
     @Nullable
-    private ItemInfo getIfPersistent(@NotNull ItemInfo info) {
+    private ItemInfo getIfPersistent(@Nonnull ItemInfo info) {
         if (!info.hasNBT() || EMCMappingHandler.hasEmcValue(info)) {
             //If we have no NBT or the base mapping has an emc value for our item with the given NBT
             // then we don't have an extended state
@@ -95,7 +95,7 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
     }
 
     @Override
-    public boolean hasKnowledge(@NotNull ItemInfo info) {
+    public boolean hasKnowledge(@Nonnull ItemInfo info) {
         if (getTeam().hasFullKnowledge(playerUUID.get())) {
             //If we have all knowledge, check if the item has extra data and
             // may not actually be in our knowledge set but can be added to it
@@ -106,7 +106,7 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
     }
 
     @Override
-    public boolean addKnowledge(@NotNull ItemInfo info) {
+    public boolean addKnowledge(@Nonnull ItemInfo info) {
         if (getTeam().hasFullKnowledge(playerUUID.get())) {
             ItemInfo persistentInfo = getIfPersistent(info);
             if (persistentInfo == null) {
@@ -134,7 +134,7 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
         return tryAdd(NBTManager.getPersistentInfo(info));
     }
 
-    private boolean tryAdd(@NotNull ItemInfo cleanedInfo) {
+    private boolean tryAdd(@Nonnull ItemInfo cleanedInfo) {
         if (getTeam().addKnowledge(cleanedInfo, playerUUID.get())) {
             fireChangedEvent();
             //syncKnowledgeChange(playerUUID, cleanedInfo, true);
@@ -144,7 +144,7 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
     }
 
     @Override
-    public boolean removeKnowledge(@NotNull ItemInfo info) {
+    public boolean removeKnowledge(@Nonnull ItemInfo info) {
         if (getTeam().hasFullKnowledge(playerUUID.get())) {
             if (info.getItem() instanceof Tome) {
                 //If we have full knowledge and are trying to remove the tome allow it
@@ -166,7 +166,7 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
         return tryRemove(NBTManager.getPersistentInfo(info));
     }
 
-    private boolean tryRemove(@NotNull ItemInfo cleanedInfo) {
+    private boolean tryRemove(@Nonnull ItemInfo cleanedInfo) {
         if (getTeam().removeKnowledge(cleanedInfo, playerUUID.get())) {
             fireChangedEvent();
             //syncKnowledgeChange(playerUUID, cleanedInfo, false);
@@ -175,7 +175,7 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
         return false;
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public Set<ItemInfo> getKnowledge() {
         if (getTeam().hasFullKnowledge(playerUUID.get())) {
@@ -187,7 +187,7 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
         return Collections.unmodifiableSet(getTeam().getKnowledge(playerUUID.get()));
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public IItemHandlerModifiable getInputAndLocks() {
         return inputLocks;
@@ -205,7 +205,7 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
     }
 
     @Override
-    public void sync(@NotNull ServerPlayer player) {
+    public void sync(@Nonnull ServerPlayerEntity player) {
         sync(TeamProjectE.getPlayerUUID(player));
     }
 
@@ -215,16 +215,16 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
                     .ifPresent(p -> PacketHandler.sendTo(new KnowledgeSyncPKT(serializeForClient()), p));
         else
             TeamProjectE.getOnlineTeamMembers(uuid)
-                    .forEach(p -> p.getCapability(PECapabilities.KNOWLEDGE_CAPABILITY)
+                    .forEach(p -> p.getCapability(ProjectEAPI.KNOWLEDGE_CAPABILITY)
                             .ifPresent(cap -> PacketHandler.sendTo(new KnowledgeSyncPKT(((TeamKnowledgeProvider) cap).serializeForClient()), p)));
     }
 
-    private CompoundTag serializeForClient() {
-        CompoundTag properties = new CompoundTag();
+    private CompoundNBT serializeForClient() {
+        CompoundNBT properties = new CompoundNBT();
         properties.putString("transmutationEmc", getTeam().getEmc(playerUUID.get()).toString());
-        ListTag knowledgeWrite = new ListTag();
+        ListNBT knowledgeWrite = new ListNBT();
         for (ItemInfo i : getTeam().getKnowledge(playerUUID.get()))
-            knowledgeWrite.add(i.write(new CompoundTag()));
+            knowledgeWrite.add(i.write(new CompoundNBT()));
 
         properties.put("knowledge", knowledgeWrite);
         properties.put("inputlock", this.inputLocks.serializeNBT());
@@ -234,7 +234,7 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
 
 
     @Override
-    public void syncEmc(@NotNull ServerPlayer player) {
+    public void syncEmc(@Nonnull ServerPlayerEntity player) {
         syncEmc(TeamProjectE.getPlayerUUID(player));
     }
 
@@ -247,7 +247,7 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
     }
 
     @Override
-    public void syncKnowledgeChange(@NotNull ServerPlayer player, ItemInfo change, boolean learned) {
+    public void syncKnowledgeChange(@Nonnull ServerPlayerEntity player, ItemInfo change, boolean learned) {
         syncKnowledgeChange(TeamProjectE.getPlayerUUID(player), change, learned);
     }
 
@@ -260,7 +260,7 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
     }
 
     @Override
-    public void syncInputAndLocks(@NotNull ServerPlayer player, List<Integer> slotsChanged, TargetUpdateType updateTargets) {
+    public void syncInputAndLocks(@Nonnull ServerPlayerEntity player, List<Integer> slotsChanged, TargetUpdateType updateTargets) {
         if (!slotsChanged.isEmpty()) {
             int slots = inputLocks.getSlots();
             Map<Integer, ItemStack> stacksToSync = new HashMap<>();
@@ -290,14 +290,14 @@ public class TeamKnowledgeProvider implements IKnowledgeProvider {
     }
 
     @Override
-    public CompoundTag serializeNBT() {
-        CompoundTag properties = new CompoundTag();
+    public CompoundNBT serializeNBT() {
+        CompoundNBT properties = new CompoundNBT();
         properties.put("inputlock", inputLocks.serializeNBT());
         return properties;
     }
 
     @Override
-    public void deserializeNBT(CompoundTag properties) {
+    public void deserializeNBT(CompoundNBT properties) {
         for (int i = 0; i < inputLocks.getSlots(); i++) {
             inputLocks.setStackInSlot(i, ItemStack.EMPTY);
         }

@@ -1,24 +1,25 @@
 package cn.leomc.teamprojecte;
 
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.world.level.saveddata.SavedData;
-import net.minecraftforge.server.ServerLifecycleHooks;
-import org.jetbrains.annotations.NotNull;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.INBT;
+import net.minecraft.nbt.ListNBT;
+import net.minecraft.world.storage.WorldSavedData;
+import net.minecraftforge.common.util.Constants;
+import net.minecraftforge.fml.server.ServerLifecycleHooks;
 
+import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class TPSavedData extends SavedData {
+public class TPSavedData extends WorldSavedData {
 
     private static TPSavedData DATA;
 
     static TPSavedData getData() {
         if (DATA == null && ServerLifecycleHooks.getCurrentServer() != null)
             DATA = ServerLifecycleHooks.getCurrentServer().overworld().getDataStorage()
-                    .computeIfAbsent(TPSavedData::new, TPSavedData::new, "teamprojecte");
+                    .computeIfAbsent(TPSavedData::new, "teamprojecte");
         return DATA;
     }
 
@@ -34,24 +35,26 @@ public class TPSavedData extends SavedData {
     }
 
     TPSavedData() {
+        super("teamprojecte");
     }
 
-    TPSavedData(CompoundTag tag) {
+    @Override
+    public void load(CompoundNBT tag) {
         TeamProjectE.LOGGER.debug(tag.toString());
         String version = tag.getString("version");
-        for (Tag t : tag.getList("teams", Tag.TAG_COMPOUND)) {
-            CompoundTag team = (CompoundTag) t;
+        for (INBT t : tag.getList("teams", Constants.NBT.TAG_COMPOUND)) {
+            CompoundNBT team = (CompoundNBT) t;
             teams.put(team.getUUID("uuid"), new TPTeam(team.getCompound("team"), version));
         }
     }
 
     @Override
-    public @NotNull CompoundTag save(CompoundTag tag) {
+    public @Nonnull CompoundNBT save(CompoundNBT tag) {
         tag.putString("version", "1");
 
-        ListTag teams = new ListTag();
+        ListNBT teams = new ListNBT();
         this.teams.forEach((uuid, team) -> {
-            CompoundTag t = new CompoundTag();
+            CompoundNBT t = new CompoundNBT();
             t.putUUID("uuid", uuid);
             t.put("team", team.save());
             teams.add(t);

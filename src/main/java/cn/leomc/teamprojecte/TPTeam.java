@@ -2,15 +2,16 @@ package cn.leomc.teamprojecte;
 
 import com.google.common.collect.Lists;
 import moze_intel.projecte.api.ItemInfo;
-import net.minecraft.Util;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.ListNBT;
+import net.minecraft.util.Util;
+import net.minecraftforge.common.util.Constants;
 
 import java.math.BigInteger;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 public class TPTeam {
     private final UUID teamUUID;
@@ -32,23 +33,23 @@ public class TPTeam {
         this(UUID.randomUUID(), owner);
     }
 
-    public TPTeam(CompoundTag tag, String version) {
+    public TPTeam(CompoundNBT tag, String version) {
         this.teamUUID = tag.getUUID("uuid");
         this.owner = tag.getUUID("owner");
         this.members = new ArrayList<>();
-        this.members.addAll(tag.getList("members", Tag.TAG_COMPOUND).stream().map(t -> ((CompoundTag) t).getUUID("uuid")).toList());
+        this.members.addAll(tag.getList("members", Constants.NBT.TAG_COMPOUND).stream().map(t -> ((CompoundNBT) t).getUUID("uuid")).collect(Collectors.toList()));
         switch (version) {
-            case "" -> {
+            case "":
                 this.knowledge = new KnowledgeData.Sharing();
-                tag.getList("knowledge", Tag.TAG_COMPOUND).stream().map(t -> ItemInfo.read(((CompoundTag) t))).filter(Objects::nonNull)
+                tag.getList("knowledge", Constants.NBT.TAG_COMPOUND).stream().map(t -> ItemInfo.read(((CompoundNBT) t))).filter(Objects::nonNull)
                         .forEach(info -> this.knowledge.addKnowledge(info, Util.NIL_UUID));
                 this.emc = new EMCData.Sharing();
                 this.emc.setEMC(new BigInteger(tag.getString("emc")), Util.NIL_UUID);
-            }
-            case "1" -> {
+                break;
+            case "1":
                 this.knowledge = KnowledgeData.of(tag.getCompound("knowledge"));
                 this.emc = EMCData.of(tag.getCompound("emc"));
-            }
+                break;
         }
     }
 
@@ -61,7 +62,7 @@ public class TPTeam {
         return owner;
     }
 
-    public void addMemberWithKnowledge(TPTeam originalTeam, Player player) {
+    public void addMemberWithKnowledge(TPTeam originalTeam, PlayerEntity player) {
         markDirty();
         UUID playerUUID = TeamProjectE.getPlayerUUID(player);
         addMember(playerUUID);
@@ -127,11 +128,11 @@ public class TPTeam {
     }
 
     public List<UUID> getMembers() {
-        return List.copyOf(members);
+        return Collections.unmodifiableList(members);
     }
 
     public List<UUID> getAll() {
-        return Lists.asList(owner, members.toArray(UUID[]::new));
+        return Lists.asList(owner, members.toArray(new UUID[0]));
     }
 
 
@@ -202,13 +203,13 @@ public class TPTeam {
         TPSavedData.getData().setDirty();
     }
 
-    public CompoundTag save() {
-        CompoundTag tag = new CompoundTag();
+    public CompoundNBT save() {
+        CompoundNBT tag = new CompoundNBT();
         tag.putUUID("uuid", teamUUID);
         tag.putUUID("owner", owner);
-        ListTag list = new ListTag();
+        ListNBT list = new ListNBT();
         for (UUID member : members) {
-            CompoundTag t = new CompoundTag();
+            CompoundNBT t = new CompoundNBT();
             t.putUUID("uuid", member);
             list.add(t);
         }
@@ -265,7 +266,7 @@ public class TPTeam {
     }
 
     public void sync(UUID uuid) {
-        TeamProjectE.getAllOnline(List.of(uuid)).forEach(TeamProjectE::sync);
+        TeamProjectE.getAllOnline(Lists.newArrayList(uuid)).forEach(TeamProjectE::sync);
     }
 
 }
